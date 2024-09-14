@@ -1,43 +1,39 @@
-name: CI/CD for Dev and Prod
+version: 0.2
 
-on:
-  push:
-    branches:
-      - main
-      - develop
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to Amazon ECR...
+      - aws --version
+      - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
+      - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME
+      - |
+        if [ "$CODEBUILD_SOURCE_VERSION" = "refs/heads/main" ]; then
+          IMAGE_TAG="latest"
+          CONTAINER_NAME="myapp-prod"
+        elif [ "$CODEBUILD_SOURCE_VERSION" = "refs/heads/develop" ]; then
+          IMAGE_TAG="dev-${CODEBUILD_RESOLVED_SOURCE_VERSION:0:7}"
+          CONTAINER_NAME="myapp-dev"
+        else
+          echo "Branch not recognized. Exiting."
+          exit 1
+        fi
 
-jobs:
   build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v2
+    commands:
+      - echo Build started on `date`
+      - echo Building the Docker image for $CONTAINER_NAME...
+      - docker build -t $REPOSITORY_URI:$IMAGE_TAG .
 
-      - name: Build Docker Image
-        run: |
-          IMAGE_TAG=${{ github.sha }}
-          docker build -t $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG .
+  post_build:
+    commands:
+      - echo Build completed on `date`
+      - echo Pushing the Docker image...
+      - docker push $REPOSITORY_URI:$IMAGE_TAG
+      - echo Writing image definitions file...
+      - printf '[{"name":"%s","imageUri":"%s"}]' $CONTAINER_NAME $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
 
-      - name: Push to ECR
-        run: |
-          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
-          docker push $AWS_ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com/$IMAGE_REPO_NAME:$IMAGE_TAG
-
-  deploy_dev:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/develop'
-    steps:
-      - name: Deploy to Dev Environment
-        run: |
-          aws ecs update-service --cluster nodejs-server-demo-ecs --service nodejs-server-ecs-service --force-new-deployment
-
-  deploy_prod:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/prod'
-    steps:
-      - name: Deploy to Production Environment
-        run: |
-          aws ecs update-service --cluster nodejs-server-demo-ecs --service nodejs-server-ecs-service-prod --force-new-deployment
+artifacts:
+  files:
+    - imagedefinitions.json
 
