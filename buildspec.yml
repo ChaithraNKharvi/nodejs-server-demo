@@ -30,8 +30,7 @@ jobs:
     steps:
       - name: Deploy to Dev Environment
         run: |
-          aws ecs update-service --cluster 
-nodejs-server-demo-ecs --service nodejs-server-ecs-service --force-new-deployment
+          aws ecs update-service --cluster nodejs-server-demo-ecs --service nodejs-server-ecs-service --force-new-deployment
 
   deploy_prod:
     needs: build
@@ -40,6 +39,5 @@ nodejs-server-demo-ecs --service nodejs-server-ecs-service --force-new-deploymen
     steps:
       - name: Deploy to Production Environment
         run: |
-          aws ecs update-service --cluster 
-nodejs-server-demo-ecs --service nodejs-server-ecs-service-prod --force-new-deployment
+          aws ecs update-service --cluster nodejs-server-demo-ecs --service nodejs-server-ecs-service-prod --force-new-deployment
 
