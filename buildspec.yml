@@ -10,10 +10,10 @@ phases:
       - |
         if [ "$CODEBUILD_SOURCE_VERSION" = "refs/heads/main" ]; then
           IMAGE_TAG="latest"
-          CONTAINER_NAME="myapp-prod"
+          CONTAINER_NAME="nodejs-server-ecs-service"
         elif [ "$CODEBUILD_SOURCE_VERSION" = "refs/heads/develop" ]; then
           IMAGE_TAG="dev-${CODEBUILD_RESOLVED_SOURCE_VERSION:0:7}"
-          CONTAINER_NAME="myapp-dev"
+          CONTAINER_NAME="nodejs-server-ecs-service"
         else
           echo "Branch not recognized. Exiting."
           exit 1
