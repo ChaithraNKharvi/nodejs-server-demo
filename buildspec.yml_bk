@@ -7,33 +7,19 @@ phases:
       - aws --version
       - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com
       - REPOSITORY_URI=$AWS_ACCOUNT_ID.dkr.ecr.$AWS_DEFAULT_REGION.amazonaws.com/$IMAGE_REPO_NAME
-      - |
-        if [ "$CODEBUILD_SOURCE_VERSION" = "refs/heads/main" ]; then
-          IMAGE_TAG="latest"
-          CONTAINER_NAME="nodejs-server-ecs-service"
-        elif [ "$CODEBUILD_SOURCE_VERSION" = "refs/heads/develop" ]; then
-          IMAGE_TAG="dev-${CODEBUILD_RESOLVED_SOURCE_VERSION:0:7}"
-          CONTAINER_NAME="nodejs-server-ecs-service"
-        else
-          echo "Branch not recognized. Exiting."
-          exit 1
-        fi
-
   build:
     commands:
       - echo Build started on `date`
-      - echo Building the Docker image for $CONTAINER_NAME...
+      - echo Building the Docker image...
       - docker build -t $REPOSITORY_URI:$IMAGE_TAG .
-
+      - docker tag $REPOSITORY_URI:$IMAGE_TAG $REPOSITORY_URI:$IMAGE_TAG
   post_build:
     commands:
       - echo Build completed on `date`
-      - echo Pushing the Docker image...
+      - echo Pushing the Docker images...
       - docker push $REPOSITORY_URI:$IMAGE_TAG
       - echo Writing image definitions file...
       - printf '[{"name":"%s","imageUri":"%s"}]' $CONTAINER_NAME $REPOSITORY_URI:$IMAGE_TAG > imagedefinitions.json
 
 artifacts:
-  files:
-    - imagedefinitions.json
-
+    files: imagedefinitions.json
