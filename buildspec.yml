@@ -2,9 +2,6 @@ version: 0.2
 
 phases:
   install:
-    runtime-versions:
-      docker: 20
-      aws-cli: 2.x
     commands:
       - echo Installing dependencies...
   pre_build:
